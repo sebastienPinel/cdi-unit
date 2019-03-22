@@ -80,6 +80,7 @@ import org.jglue.cdiunit.internal.servlet.MockHttpServletResponseImpl;
 import org.jglue.cdiunit.internal.servlet.MockHttpSessionImpl;
 import org.jglue.cdiunit.internal.servlet.MockServletContextImpl;
 import org.jglue.cdiunit.internal.servlet.ServletObjectsProducer;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -142,7 +143,8 @@ public class WeldTestUrlDeployment implements Deployment {
 
 			Class<?> c = classesToProcess.iterator().next();
 
-			if ((isCdiClass(c) || Extension.class.isAssignableFrom(c)) && !classesProcessed.contains(c) && !c.isPrimitive()
+			if ((isCdiClass(c) && (c.equals(testConfiguration.getTestClass()) || !c.isAnnotationPresent(RunWith.class))
+					|| Extension.class.isAssignableFrom(c)) && !classesProcessed.contains(c) && !c.isPrimitive()
 					&& !classesToIgnore.contains(c)) {
 				classesProcessed.add(c);
 				if (!c.isAnnotation()) {
