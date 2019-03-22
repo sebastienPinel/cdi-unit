@@ -44,23 +44,23 @@ import org.junit.runners.model.Statement;
  * <code>&#064;CdiRunner</code> is a JUnit runner that uses a CDI container to
  * create unit test objects. Simply add
  * <code>&#064;RunWith(CdiRunner.class)</code> to your test class.
- * 
+ *
  * <pre>
  * <code>
  * &#064;RunWith(CdiRunner.class) // Runs the test with CDI-Unit
  * class MyTest {
  *   &#064;Inject
  *   Something something; // This will be injected before the tests are run!
- * 
+ *
  *   ... //The rest of the test goes here.
  * }</code>
  * </pre>
- * 
+ *
  * @author Bryn Cooke
  */
 public class CdiRunner extends BlockJUnit4ClassRunner {
 
-	private Class<?> clazz;
+	private final Class<?> clazz;
 	private Weld weld;
 	private WeldContainer container;
 	private Throwable startupException;
@@ -69,25 +69,25 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 	private static final String ABSENT_CODE_PREFIX = "Absent Code attribute in method that is not native or abstract in class file ";
 	private static final String JNDI_FACTORY_PROPERTY = "java.naming.factory.initial";
 
-	public CdiRunner(Class<?> clazz) throws InitializationError {
+	public CdiRunner(final Class<?> clazz) throws InitializationError {
 		super(checkClass(clazz));
 		this.clazz = clazz;
 	}
 
-	private static Class<?> checkClass(Class<?> clazz) {
+	private static Class<?> checkClass(final Class<?> clazz) {
 		try {
-			for(Method m : clazz.getMethods()) {
+			for(final Method m : clazz.getMethods()) {
 				m.getReturnType();
 				m.getParameterTypes();
 				m.getParameterAnnotations();
 			}
-			for(Field f : clazz.getFields()) {
+			for(final Field f : clazz.getFields()) {
 				f.getType();
 			}
 		}
-		catch(ClassFormatError e) {
+		catch(final ClassFormatError e) {
 			throw parseClassFormatError(e);
-		} 
+		}
 		return clazz;
 	}
 
@@ -104,7 +104,9 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 
     private void initWeld(final TestConfiguration testConfig) {
         if (weld != null)
+        {
             return;
+        }
 
 		try {
 			checkSupportedVersion();
@@ -112,10 +114,11 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 			weld = new Weld() {
 
 				// override for Weld 2.0, 3.0
-				protected Deployment createDeployment(ResourceLoader resourceLoader, CDI11Bootstrap bootstrap) {
+				@Override
+                protected Deployment createDeployment(final ResourceLoader resourceLoader, final CDI11Bootstrap bootstrap) {
 					try {
 						return new Weld11TestUrlDeployment(resourceLoader, bootstrap, testConfig);
-					} catch (IOException e) {
+					} catch (final IOException e) {
 						startupException = e;
 						throw new RuntimeException(e);
 					}
@@ -123,21 +126,21 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 
 				// override for Weld 1.x
 				@SuppressWarnings("unused")
-				protected Deployment createDeployment(ResourceLoader resourceLoader, Bootstrap bootstrap) {
+				protected Deployment createDeployment(final ResourceLoader resourceLoader, final Bootstrap bootstrap) {
 					try {
 						return new WeldTestUrlDeployment(resourceLoader, bootstrap, testConfig);
-					} catch (IOException e) {
+					} catch (final IOException e) {
 						startupException = e;
 						throw new RuntimeException(e);
 					}
 				}
 
 			};
-			  
+
 			try {
 
 				container = weld.initialize();
-			} catch (Throwable e) {
+			} catch (final Throwable e) {
 				if (startupException == null) {
 					startupException = e;
 				}
@@ -146,25 +149,25 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 				}
 			}
 
-		} catch (ClassFormatError e) {
+		} catch (final ClassFormatError e) {
 
 			startupException = parseClassFormatError(e);
-		} catch (Throwable e) {
+		} catch (final Throwable e) {
 			startupException = new Exception("Unable to start weld", e);
 		}
 	}
 
 	private void checkSupportedVersion() {
-		String version = Formats.version(WeldBootstrap.class.getPackage());
+		final String version = Formats.version(WeldBootstrap.class.getPackage());
 		if("2.2.8 (Final)".equals(version) || "2.2.7 (Final)".equals(version)) {
      		 startupException = new Exception("Weld 2.2.8 and 2.2.7 are not supported. Suggest upgrading to 2.2.9");
     	}
 	}
 
-	private static ClassFormatError parseClassFormatError(ClassFormatError e) {
+	private static ClassFormatError parseClassFormatError(final ClassFormatError e) {
 		if (e.getMessage().startsWith(ABSENT_CODE_PREFIX)) {
-			String offendingClass = e.getMessage().substring(ABSENT_CODE_PREFIX.length());
-			URL url = CdiRunner.class.getClassLoader().getResource(offendingClass + ".class");
+			final String offendingClass = e.getMessage().substring(ABSENT_CODE_PREFIX.length());
+			final URL url = CdiRunner.class.getClassLoader().getResource(offendingClass + ".class");
 
 			return new ClassFormatError("'" + offendingClass.replace('/', '.')
 					+ "' is an API only class. You need to remove '"
@@ -174,15 +177,15 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 		}
 	}
 
-	private <T> T createTest(Class<T> testClass) {
+	private <T> T createTest(final Class<T> testClass) {
 
-		T t = container.instance().select(testClass).get();
+		final T t = container.instance().select(testClass).get();
 
 		return t;
 	}
-	
+
 	   @Override
-	    protected Statement classBlock(RunNotifier notifier) {
+	    protected Statement classBlock(final RunNotifier notifier) {
 	        final Statement defaultStatement = super.classBlock(notifier);
 	        return new Statement() {
 
@@ -190,8 +193,8 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 	            public void evaluate() throws Throwable {
 	                testConfiguration = createTestConfiguration();
 	                if (testConfiguration.getIsolationLevel() == IsolationLevel.PER_CLASS) {
-	                    initWeld(testConfiguration);
 	                    defaultStatement.evaluate();
+	                    initWeld(testConfiguration);
 	                    weld.shutdown();
 	                    weld = null;
 	                }
@@ -220,11 +223,11 @@ public class CdiRunner extends BlockJUnit4ClassRunner {
 					}
 					throw startupException;
 				}
-				String oldFactory = System.getProperty(JNDI_FACTORY_PROPERTY);
+				final String oldFactory = System.getProperty(JNDI_FACTORY_PROPERTY);
 				if (oldFactory == null) {
 					System.setProperty(JNDI_FACTORY_PROPERTY, "org.jglue.cdiunit.internal.naming.CdiUnitContextFactory");
 				}
-				InitialContext initialContext = new InitialContext();
+				final InitialContext initialContext = new InitialContext();
 				initialContext.bind("java:comp/BeanManager", container.getBeanManager());
 
 				try {
